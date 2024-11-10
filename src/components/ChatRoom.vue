@@ -70,13 +70,7 @@
             <option class="bg-black text-white" value="180">3 hours</option>
             <option class="bg-black text-white" value="1440">24 hours</option>
           </select>
-          <input
-            v-model="maximumMembers"
-            type="number"
-            min="1"
-            placeholder="Enter maximum members"
-            class="border p-2 w-full mb-2 text-black"
-          />
+
           <div class="flex items-center mb-2">
             <input type="checkbox" v-model="approvalRequire" class="mr-2" />
             <label for="approvalRequire">Approval Required</label>
@@ -101,12 +95,20 @@
           </h2>
           <div class="messages border rounded p-4 h-64 overflow-y-scroll mb-4">
             <div
-              v-for="message in messages"
+              v-for="message in currentGroupMessages"
               :key="message.id"
               class="message mb-2"
             >
-              <strong>{{ message.senderId }}:</strong> {{ message.content }}
+              <div class="flex justify-between items-center">
+                <strong>{{ message.userId }}</strong>
+                <span class="text-gray-500 text-xs">
+                  {{ new Date(message.createdAt).toLocaleString() }}
+                </span>
+              </div>
+              <p>{{ message.content }}</p>
             </div>
+
+
           </div>
           <div class="flex gap-2">
             <input
@@ -123,6 +125,7 @@
           </div>
         </div>
       </div>
+
     </div>
 
     <!-- Toast Notification -->
@@ -148,15 +151,16 @@
         filteredGroups: [],
         currentGroupId: null,
         currentGroupName: "",
-        messages: [],
-        newMessage: "",
+        currentGroupCode: "",
+        messages: [], // save message 
+        newMessage: "", // new message from input
         newGroupName: "",
         groupCode: "", // Input for group code
         approvalRequire: false, // Checkbox for approval requirement
         selectedDuration: 30, // Duration in minutes
-        maximumMembers: null, // Maximum members
+        maximumMembers: 200, // Maximum members
         searchQuery: "",
-        ws: null, // WebSocket instance
+        webSocket: null, // WebSocket connection
         durationMap: {
           30: 30 * 60, // 30 minutes
           60: 60 * 60, // 1 hour
@@ -166,7 +170,13 @@
       };
     },
     created() {
+      this.connectToWebSocket();
       this.fetchGroups();
+    },
+    computed: {
+      currentGroupMessages() {
+        return this.messages.filter(msg => msg.groupId === this.currentGroupId);
+      }
     },
     methods: {
       copyGroupCode(groupCode) {
@@ -180,6 +190,7 @@
           }
         );
       },
+
       showToastWithMessage(message) {
         this.toastMessage = message;
         this.showToast = true;
@@ -188,9 +199,74 @@
         }, 1000); // Ẩn sau 1 giây
       },
 
-      selectGroup(groupId) {
+      async selectGroup(groupId) {
         this.currentGroupId = groupId;
-        console.log("Selected Group ID:", groupId);
+        this.currentGroupName = this.groups.find(group => group.id === groupId)?.name || '';
+
+        // Fetch previous messages
+        try {
+          const response = await axios.get(`http://localhost:8082/api/messages/group/${groupId}`);
+          this.messages = response.data;
+        } catch (error) {
+          console.error("Failed to fetch messages:", error.response?.data || error.message);
+        }
+      },
+
+      connectToWebSocket() {
+        if (this.webSocket) {
+          this.webSocket.close(); // Đóng kết nối cũ nếu đã tồn tại
+        }
+
+        // Tạo kết nối WebSocket
+        this.webSocket = new WebSocket(`ws://localhost:8082/ws/chat`);
+
+        this.webSocket.onopen = () => {
+          console.log('WebSocket connection established');
+        };
+
+        this.webSocket.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data); // Parse JSON thành đối tượng Message
+            if (message.groupId === this.currentGroupId) {
+              // Chỉ thêm tin nhắn nếu thuộc group hiện tại
+              this.messages.push(message);
+
+              // Sắp xếp tin nhắn theo thời gian (optional)
+              this.messages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            }
+          } catch (error) {
+            console.error("Failed to process WebSocket message:", error);
+          }
+        };
+
+
+        this.webSocket.onclose = () => {
+          console.log('WebSocket connection closed');
+        };
+
+        this.webSocket.onerror = (error) => {
+          console.error('WebSocket error:', error);
+        };
+      },
+
+      sendMessage() {
+        if (this.newMessage.trim() === '') return;
+
+        if (this.webSocket && this.webSocket.readyState === WebSocket.OPEN) {
+          const userId = JSON.parse(localStorage.getItem("x-user")).id;
+
+          const message = {
+            userId,
+            groupId: this.currentGroupId,
+            content: this.newMessage,
+          };
+
+          console.log(message);
+          this.webSocket.send(JSON.stringify(message));
+          this.newMessage = '';
+        } else {
+          alert('WebSocket connection is not open.');
+        }
       },
 
       async fetchGroups() {
@@ -241,7 +317,32 @@
   </script>
   
   <style scoped>
-  .hover\:bg-gray-200:hover {
+
+  /* Toast Notification */
+  @keyframes fade {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+.animate-fade {
+  animation: fade 1s ease-in-out;
+}
+  /* group side bar */
+
+  .hover:bg-gray-200:hover {
     background-color: #e5e7eb; /* Màu xám nhạt */
   }
   .bg-blue-100 {
