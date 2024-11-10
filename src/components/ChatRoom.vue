@@ -17,19 +17,30 @@
   
         <!-- Group List -->
         <div>
-          <ul v-if="filteredGroups.length > 0" class="mb-4">
+          <ul v-if="groups.length > 0" class="mb-4">
             <li
-              v-for="group in filteredGroups"
+              v-for="group in groups"
               :key="group.id"
-              class="cursor-pointer p-2 rounded hover:bg-gray-200"
-              :class="{ 'bg-blue-100': group.id === currentGroupId }"
+              class="flex items-center cursor-pointer p-2 rounded hover:bg-gray-200"
+              :class="[
+                'contact-item p-2 cursor-pointer flex items-center',
+                group.group_id === currentGroupId ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+              ]"
               @click="selectGroup(group.id)"
             >
-              {{ group.name }}
+              <!-- Avatar -->
+              <img
+                src="@/assets/logo.png"
+                alt="Group Avatar"
+                class="w-10 h-10 rounded-full mr-4"
+              />
+              <!-- Group Name -->
+              <span>{{ group.name }}</span>
             </li>
           </ul>
           <p v-else>No groups found. Join a group using a group code or create a new group.</p>
         </div>
+
   
         <!-- Create Group Card -->
         <div class="p-4 rounded-lg shadow-md bg-gradient-to-r from-green-400 to-blue-500 text-white mt-auto">
@@ -133,16 +144,24 @@
       this.fetchGroups();
     },
     methods: {
+      selectGroup(groupId) {
+        this.currentGroupId = groupId;
+        console.log("Selected Group ID:", groupId);
+      },
+
       async fetchGroups() {
-      try {
-        const response = await axios.get(`http://localhost:8082/api/groups/user/${this.user.id}`);
-        this.groups = response.data;
-        console.log("Fetched groups:", this.groups);
-      } catch (error) {
-        console.error("Error fetching groups:", error.response?.data || error.message);
-        alert("Failed to fetch groups. Please try again.");
-      }
-    },
+        try {
+          const response = await axios.get(`http://localhost:8082/api/groups/user/${this.user.id}`);
+          this.groups = response.data.map(group => ({
+            ...group,
+          }));
+          console.log("Fetched groups:", this.groups);
+        } catch (error) {
+          console.error("Error fetching groups:", error.response?.data || error.message);
+          alert("Failed to fetch groups. Please try again.");
+        }
+      },
+
       async createGroup() {
         if (!this.newGroupName || !this.maximumMembers) {
           alert("Group name and maximum members cannot be empty!");
@@ -177,7 +196,15 @@
   };
   </script>
   
-  <style>
-  /* Add TailwindCSS styles for the gradient card */
+  <style scoped>
+  .hover\:bg-gray-200:hover {
+    background-color: #e5e7eb; /* Màu xám nhạt */
+  }
+  .bg-blue-100 {
+    background-color: #ebf8ff; /* Màu xanh nhạt */
+  }
+  .rounded-full {
+    border-radius: 9999px; /* Hình tròn */
+  }
   </style>
   
