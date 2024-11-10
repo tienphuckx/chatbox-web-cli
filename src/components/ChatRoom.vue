@@ -5,7 +5,7 @@
         <!-- Display User Info -->
         <div class="mb-4">
           <h2 class="text-xl font-bold">Welcome, {{ user.username }}</h2>
-          <p class="text-gray-600">User ID: {{ user.id }}</p>
+          <!-- <p class="text-gray-600">User ID: {{ user.id }}</p> -->
         </div>
   
         <!-- Search Bar -->
@@ -15,33 +15,46 @@
           class="border p-2 w-full mb-4"
         />
   
-        <!-- Group List -->
+       <!-- Group List -->
         <div>
-          <ul v-if="groups.length > 0" class="mb-4">
+          <ul v-if="groups.length > 0" class="mb-4 space-y-2">
             <li
               v-for="group in groups"
               :key="group.id"
-              class="flex items-center cursor-pointer p-2 rounded hover:bg-gray-200"
+              class="flex items-center justify-between p-4 rounded shadow hover:bg-gray-100"
               :class="[
-                'contact-item p-2 cursor-pointer flex items-center',
-                group.group_id === currentGroupId ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+                group.id === currentGroupId ? 'bg-blue-200' : 'hover:bg-blue-50'
               ]"
               @click="selectGroup(group.id)"
             >
               <!-- Avatar -->
-              <img
-                src="@/assets/logo.png"
-                alt="Group Avatar"
-                class="w-10 h-10 rounded-full mr-4"
-              />
-              <!-- Group Name -->
-              <span>{{ group.name }}</span>
+              <div class="flex items-center">
+                <img
+                  src="@/assets/logo.png"
+                  alt="Group Avatar"
+                  class="w-12 h-12 rounded-full mr-4"
+                />
+                <!-- Group Info -->
+                <div class="flex flex-col">
+                  <p class="font-semibold text-lg text-left">{{ group.name }}</p>
+                  <div class="flex items-center space-x-2">
+                    <p class="text-gray-500 text-sm">{{ group.groupCode }}</p>
+                    <button
+                      class="bg-gray-300 text-gray-700 px-2 py-1 text-xs rounded hover:bg-gray-400"
+                      @click.stop="copyGroupCode(group.groupCode)"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              </div>
             </li>
           </ul>
-          <p v-else>No groups found. Join a group using a group code or create a new group.</p>
+          <p v-else class="text-gray-500">No groups found. Join a group using a group code or create a new group.</p>
         </div>
 
-  
+
+
         <!-- Create Group Card -->
         <div class="p-4 rounded-lg shadow-md bg-gradient-to-r from-green-400 to-blue-500 text-white mt-auto">
           <h3 class="text-lg font-bold mb-2">Create a New Group</h3>
@@ -50,15 +63,12 @@
             placeholder="Enter group name"
             class="border p-2 w-full mb-2 text-black"
           />
-          <div class="flex items-center mb-2">
-            <input type="checkbox" v-model="approvalRequire" class="mr-2" />
-            <label for="approvalRequire">Approval Required</label>
-          </div>
-          <select v-model="selectedDuration" class="border p-2 w-full mb-2">
-            <option value="30">30 minutes</option>
-            <option value="60">1 hour</option>
-            <option value="180">3 hours</option>
-            <option value="1440">24 hours</option>
+          
+          <select v-model="selectedDuration" class="border p-2 w-full mb-2 bg-transparent">
+            <option class="bg-black text-white" value="30">30 minutes</option>
+            <option class="bg-black text-white" value="60">1 hour</option>
+            <option class="bg-black text-white" value="180">3 hours</option>
+            <option class="bg-black text-white" value="1440">24 hours</option>
           </select>
           <input
             v-model="maximumMembers"
@@ -67,6 +77,10 @@
             placeholder="Enter maximum members"
             class="border p-2 w-full mb-2 text-black"
           />
+          <div class="flex items-center mb-2">
+            <input type="checkbox" v-model="approvalRequire" class="mr-2" />
+            <label for="approvalRequire">Approval Required</label>
+          </div>
           <button
             @click="createGroup"
             class="bg-white text-blue-500 px-4 py-2 rounded w-full font-semibold hover:bg-gray-100"
@@ -110,6 +124,15 @@
         </div>
       </div>
     </div>
+
+    <!-- Toast Notification -->
+    <div
+      v-if="showToast"
+      class="fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded shadow-lg animate-fade"
+    >
+      {{ toastMessage }}
+    </div>
+
   </template>
   
   <script>
@@ -118,6 +141,8 @@
   export default {
     data() {
       return {
+        toastMessage: '',
+        showToast: false,
         user: JSON.parse(localStorage.getItem("x-user")) || {}, // Retrieve user info
         groups: [],
         filteredGroups: [],
@@ -144,6 +169,25 @@
       this.fetchGroups();
     },
     methods: {
+      copyGroupCode(groupCode) {
+        navigator.clipboard.writeText(groupCode).then(
+          () => {
+            this.showToastWithMessage("Group code copied!");
+          },
+          (err) => {
+            console.error("Failed to copy text: ", err);
+            this.showToastWithMessage("Failed to copy group code.");
+          }
+        );
+      },
+      showToastWithMessage(message) {
+        this.toastMessage = message;
+        this.showToast = true;
+        setTimeout(() => {
+          this.showToast = false;
+        }, 1000); // Ẩn sau 1 giây
+      },
+
       selectGroup(groupId) {
         this.currentGroupId = groupId;
         console.log("Selected Group ID:", groupId);
