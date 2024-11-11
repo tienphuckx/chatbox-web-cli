@@ -82,6 +82,24 @@
             Create Group
           </button>
         </div>
+
+        <!-- Join Group Card -->
+        <div class="mt-3 p-4 rounded-lg shadow-md bg-gradient-to-r from-green-400 to-blue-500 text-white">
+          <h3 class="text-lg font-bold mb-2">Join group</h3>
+          <input
+            v-model="joinGroupCode"
+            placeholder="Enter group code"
+            class="border p-2 w-full mb-2 text-black"
+          />
+          <button
+            @click="joinGroup"
+            class="bg-white text-blue-500 px-4 py-2 rounded w-full font-semibold hover:bg-gray-100"
+          >
+            Join
+          </button>
+        </div>
+
+
       </div>
   
       <!-- Right Panel: Messages -->
@@ -152,6 +170,7 @@
         currentGroupId: null,
         currentGroupName: "",
         currentGroupCode: "",
+        joinGroupCode: "",
         messages: [], // save message 
         newMessage: "", // new message from input
         newGroupName: "",
@@ -214,10 +233,9 @@
 
       connectToWebSocket() {
         if (this.webSocket) {
-          this.webSocket.close(); // Đóng kết nối cũ nếu đã tồn tại
+          this.webSocket.close();
         }
 
-        // Tạo kết nối WebSocket
         this.webSocket = new WebSocket(`ws://localhost:8082/ws/chat`);
 
         this.webSocket.onopen = () => {
@@ -226,19 +244,15 @@
 
         this.webSocket.onmessage = (event) => {
           try {
-            const message = JSON.parse(event.data); // Parse JSON thành đối tượng Message
+            const message = JSON.parse(event.data);
+            console.log('Received WebSocket message:', message);
             if (message.groupId === this.currentGroupId) {
-              // Chỉ thêm tin nhắn nếu thuộc group hiện tại
               this.messages.push(message);
-
-              // Sắp xếp tin nhắn theo thời gian (optional)
-              this.messages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
             }
           } catch (error) {
             console.error("Failed to process WebSocket message:", error);
           }
         };
-
 
         this.webSocket.onclose = () => {
           console.log('WebSocket connection closed');
@@ -312,6 +326,33 @@
           alert("Failed to create group. Please try again.");
         }
       },
+      async joinGroup() {
+        if (!this.joinGroupCode) {
+          alert("Group code cannot be empty!");
+          return;
+        }
+        console.log("Join gr code: ", this.joinGroupCode);
+
+        try {
+          const response = await axios.post("http://localhost:8082/api/groups/join", {
+            groupCode: this.joinGroupCode,
+            userId: this.user.id,
+          });
+
+          console.log(response.data);
+
+          if (response.data.success) {
+            alert(response.data.message); // Show success message
+            this.fetchGroups(); // Refresh groups
+          } else {
+            alert(response.data.message); // Show error message
+          }
+        } catch (error) {
+          console.error("Error joining group:", error.response?.data || error.message);
+          alert("Failed to join group. Please try again.");
+        }
+      }
+
     },
   };
   </script>
