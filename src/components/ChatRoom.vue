@@ -133,12 +133,22 @@
 
     <!-- Right Panel: Messages -->
     <div class="flex-grow p-4 flex flex-col h-screen">
+
       <div v-if="!currentGroupId" class="flex items-center justify-center flex-grow">
         <p class="text-gray-500 text-lg">Select a group to view messages.</p>
       </div>
-      <div v-else class="flex flex-col h-full">
+      
+      <div v-else class="flex flex-col h-full relative">
         <!-- Header -->
-        <h2 class="text-xl font-bold mb-4 text-blue-600">Group: {{ currentGroupName }}</h2>
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-bold mb-4 text-blue-600">Group: {{ currentGroupName }}</h2>
+          <button
+            class="bg-gray-200 text-gray-600 px-3 py-1 rounded hover:bg-gray-300 transition"
+            @click="toggleSetting"
+          >
+            Icon Setting
+          </button>
+        </div>
 
         <!-- List Messages -->
         <div
@@ -196,10 +206,6 @@
           </div>
         </div>
 
-
-
-
-
         <!-- Input New Message -->
         <div class="mt-4 flex gap-2">
           <input
@@ -216,9 +222,53 @@
           </button>
         </div>
 
+        <!-- Overlay -->
+        <div
+          v-if="showSetting"
+          class="fixed inset-0 bg-black bg-opacity-50 z-10"
+          @click="closeSetting"
+        ></div>
+
+        <!-- Setting Bar -->
+        <div
+          v-show="showSetting"
+          class="absolute top-0 right-0 w-80 h-full bg-white shadow-lg border-l p-4 transition-transform transform z-20"
+          :class="{ 'translate-x-0': showSetting, 'translate-x-full': !showSetting }"
+        >
+          <h3 class="text-lg font-bold mb-4">Group Settings</h3>
+          <p class="text-gray-500 mb-2">Group Name: <span class="font-semibold">{{ groupSetting.name }}</span></p>
+          <p class="text-gray-500 mb-2">Group Owner: <span class="font-semibold">{{ groupSetting.owner }}</span></p>
+          <p class="text-gray-500 mb-4">Joined Members:</p>
+          <ul class="list-disc pl-5">
+            <li v-for="member in groupSetting.joinedMembers" :key="member.id" class="mb-1">
+              {{ member.name }}
+            </li>
+          </ul>
+          <p class="text-gray-500 mb-4">Waiting Members:</p>
+          <ul class="list-disc pl-5">
+            <li v-for="member in groupSetting.waitingMembers" :key="member.id" class="mb-1">
+              {{ member.name }}
+            </li>
+          </ul>
+          <div v-if="groupSetting.isOwner" class="mt-4">
+            <button
+              class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition w-full"
+            >
+              Delete Group
+            </button>
+          </div>
+          <div v-else class="mt-4">
+            <button
+              class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition w-full"
+            >
+              Leave Group
+            </button>
+          </div>
+        </div>
 
 
       </div>
+
     </div>
 
 
@@ -240,6 +290,20 @@
   export default {
     data() {
       return {
+        showSetting: false,
+        groupSetting: {
+          name: "Sample Group",
+          owner: "John Doe",
+          joinedMembers: [
+            { id: 1, name: "Alice" },
+            { id: 2, name: "Bob" },
+          ],
+          waitingMembers: [
+            { id: 3, name: "Charlie" },
+            { id: 4, name: "David" },
+          ],
+          isOwner: true, // Giả định người dùng hiện tại là chủ nhóm
+        },
         showCreateBox: true,
         showJoinBox: false,
         toastMessage: '',
@@ -287,6 +351,33 @@
         },
       },
     methods: {
+      toggleSetting() {
+        this.showSetting = !this.showSetting;
+        if (this.showSetting) {
+          this.fetchSetting();
+        }
+      },
+      closeSetting() {
+        this.showSetting = false;
+      },
+      fetchSetting() {
+        // Fake API call (dữ liệu tĩnh)
+        setTimeout(() => {
+          this.groupSetting = {
+            name: "Updated Group Name",
+            owner: "Updated Owner Name",
+            joinedMembers: [
+              { id: 1, name: "Updated Alice" },
+              { id: 2, name: "Updated Bob" },
+            ],
+            waitingMembers: [
+              { id: 3, name: "Updated Charlie" },
+              { id: 4, name: "Updated David" },
+            ],
+            isOwner: Math.random() > 0.5, // Random isOwner để kiểm tra UI
+          };
+        }, 500); // Giả lập thời gian chờ API
+      },
       toggleBox(type) {
         if (type === "create") {
           this.showCreateBox = !this.showCreateBox;
@@ -550,6 +641,32 @@
 .messages {
   max-height: calc(100% - 56px); /* Tính toán trừ khoảng trống cho header và footer nếu cần */
 }
+
+
+
+/* Overlay Background */
+.bg-opacity-50 {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Transition Effect for Setting Bar */
+.transform {
+  transition: transform 0.3s ease-in-out;
+}
+
+.translate-x-full {
+  transform: translateX(100%);
+}
+
+.translate-x-0 {
+  transform: translateX(0);
+}
+
+/* Disable pointer events when blurred */
+.pointer-events-none {
+  pointer-events: none;
+}
+
 
   </style>
   
