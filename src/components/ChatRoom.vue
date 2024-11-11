@@ -126,10 +126,8 @@
         </button>
       </div>
 
-
-
-
     </div>
+
 
     <!-- Right Panel: Messages -->
     <div class="flex-grow p-4 flex flex-col h-screen">
@@ -222,7 +220,7 @@
           </button>
         </div>
 
-        <!-- Overlay -->
+        <!-- Overlay for setting bar -->
         <div
           v-if="showSetting"
           class="fixed inset-0 bg-black bg-opacity-50 z-10"
@@ -238,18 +236,21 @@
           <h3 class="text-lg font-bold mb-4">Group Settings</h3>
           <p class="text-gray-500 mb-2">Group Name: <span class="font-semibold">{{ groupSetting.name }}</span></p>
           <p class="text-gray-500 mb-2">Group Owner: <span class="font-semibold">{{ groupSetting.owner }}</span></p>
+
           <p class="text-gray-500 mb-4">Joined Members:</p>
           <ul class="list-disc pl-5">
             <li v-for="member in groupSetting.joinedMembers" :key="member.id" class="mb-1">
               {{ member.name }}
             </li>
           </ul>
+
           <p class="text-gray-500 mb-4">Waiting Members:</p>
           <ul class="list-disc pl-5">
             <li v-for="member in groupSetting.waitingMembers" :key="member.id" class="mb-1">
-              {{ member.name }}
+              {{ member.name }} - {{ member.message }}
             </li>
           </ul>
+
           <div v-if="groupSetting.isOwner" class="mt-4">
             <button
               class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition w-full"
@@ -265,6 +266,7 @@
             </button>
           </div>
         </div>
+
 
 
       </div>
@@ -292,19 +294,13 @@
       return {
         showSetting: false,
         groupSetting: {
-          name: "Sample Group",
-          owner: "John Doe",
-          joinedMembers: [
-            { id: 1, name: "Alice" },
-            { id: 2, name: "Bob" },
-          ],
-          waitingMembers: [
-            { id: 3, name: "Charlie" },
-            { id: 4, name: "David" },
-          ],
-          isOwner: true, // Giả định người dùng hiện tại là chủ nhóm
+          name: "",
+          owner: "",
+          joinedMembers: [],
+          waitingMembers: [],
+          isOwner: false,
         },
-        showCreateBox: true,
+        showCreateBox: false,
         showJoinBox: false,
         toastMessage: '',
         showToast: false,
@@ -353,31 +349,42 @@
     methods: {
       toggleSetting() {
         this.showSetting = !this.showSetting;
-        if (this.showSetting) {
+        if (this.showSetting) { // call when open setting tab (showSetting == true)
           this.fetchSetting();
         }
       },
       closeSetting() {
         this.showSetting = false;
       },
-      fetchSetting() {
-        // Fake API call (dữ liệu tĩnh)
-        setTimeout(() => {
-          this.groupSetting = {
-            name: "Updated Group Name",
-            owner: "Updated Owner Name",
-            joinedMembers: [
-              { id: 1, name: "Updated Alice" },
-              { id: 2, name: "Updated Bob" },
-            ],
-            waitingMembers: [
-              { id: 3, name: "Updated Charlie" },
-              { id: 4, name: "Updated David" },
-            ],
-            isOwner: Math.random() > 0.5, // Random isOwner để kiểm tra UI
-          };
-        }, 500); // Giả lập thời gian chờ API
+      async fetchSetting() {
+        try {
+          const groupCode = this.currentGroupCode;
+          const response = await axios.get(`/api/groups/setting/${groupCode}`);
+
+          if (response.status === 200) {
+            const data = response.data;
+            this.groupSetting = {
+              name: data.groupName,
+              owner: data.ownerName,
+              joinedMembers: data.listJoinedMember.map(member => ({
+                id: member.memberId,
+                name: member.memberName,
+              })),
+              waitingMembers: data.listWaitingMember.map(member => ({
+                id: member.memberId,
+                name: member.memberName,
+                message: member.memberMessage,
+              })),
+              isOwner: data.ownerId === this.user.id, // Kiểm tra xem người dùng hiện tại có phải là chủ nhóm không
+            };
+          } else {
+            console.error("Failed to fetch group setting data.");
+          }
+        } catch (error) {
+          console.error("Error fetching group setting:", error);
+        }
       },
+
       toggleBox(type) {
         if (type === "create") {
           this.showCreateBox = !this.showCreateBox;
@@ -418,6 +425,7 @@
       async selectGroup(groupId) {
         this.currentGroupId = groupId;
         this.currentGroupName = this.groups.find(group => group.id === groupId)?.name || '';
+        this.currentGroupCode = this.groups.find(group => group.id === groupId)?.groupCode || '';
 
         // Fetch previous messages
         try {
