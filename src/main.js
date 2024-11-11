@@ -4,6 +4,9 @@ import { createRouter, createWebHistory } from "vue-router";
 import RegisterPage from "./views/RegisterPage.vue";
 import ChatRoom from "./components/ChatRoom.vue";
 import "./assets/tailwind.css";
+import "@fortawesome/fontawesome-free/css/all.css";
+import "@fortawesome/fontawesome-free/js/all.js";
+
 
 const routes = [
   { path: "/", component: RegisterPage },

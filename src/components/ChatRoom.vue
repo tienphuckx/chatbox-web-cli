@@ -137,16 +137,35 @@
       </div>
       
       <div v-else class="flex flex-col h-full relative">
+
         <!-- Header -->
-        <div class="flex justify-between items-center">
-          <h2 class="text-xl font-bold mb-4 text-blue-600">Group: {{ currentGroupName }}</h2>
+        <div class="flex justify-between items-center bg-blue-100 p-4 rounded-lg shadow-md">
+          <!-- Group Info -->
+          <div>
+            <h2 class="text-2xl font-bold text-blue-800 mb-1">
+              {{ groupDetailHeader.groupName }}
+            </h2>
+            <p class="text-gray-600 text-sm flex items-center gap-4">
+              <span>
+                <i class="fas fa-user-friends mr-1 text-blue-600"></i>
+                {{ groupDetailHeader.joinedMember }} joined
+              </span>
+              <span>
+                <i class="fas fa-hourglass-half mr-1 text-yellow-500"></i>
+                {{ groupDetailHeader.waitingMembers }} waiting for approval
+              </span>
+            </p>
+          </div>
+
+          <!-- Settings Button -->
           <button
-            class="bg-gray-200 text-gray-600 px-3 py-1 rounded hover:bg-gray-300 transition"
+            class="bg-white text-gray-600 px-3 py-2 rounded-full shadow hover:bg-gray-100 hover:shadow-lg transition flex items-center justify-center"
             @click="toggleSetting"
           >
-            Icon Setting
+            <i class="fas fa-cog text-xl"></i>
           </button>
         </div>
+
 
         <!-- List Messages -->
         <div
@@ -170,7 +189,6 @@
 
             <!-- Message Content -->
             <div class="text-sm max-w-md flex flex-col">
-             
               
               <div
                 class="p-2"
@@ -240,7 +258,12 @@
           <p class="text-gray-500 mb-4">Joined Members:</p>
           <ul class="list-disc pl-5">
             <li v-for="member in groupSetting.joinedMembers" :key="member.id" class="mb-1">
-              {{ member.name }}
+              <div v-if="member.id">
+                <span class="text-gray-500">{{ member.name }}</span>
+                <span>
+                  <button class="ml-3 text-red-500" @click="removeMember">Remove</button>
+                </span>
+              </div>
             </li>
           </ul>
 
@@ -260,7 +283,7 @@
           </div>
           <div v-else class="mt-4">
             <button
-              class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition w-full"
+              class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition w-full"
             >
               Leave Group
             </button>
@@ -292,6 +315,8 @@
   export default {
     data() {
       return {
+        messageDetailPage: 0,
+        messageDetailLimit: 10,
         showSetting: false,
         groupSetting: {
           name: "",
@@ -299,6 +324,12 @@
           joinedMembers: [],
           waitingMembers: [],
           isOwner: false,
+        },
+        groupDetailHeader: {
+          groupName: "",
+          groupId: "",
+          joinedMember: "",
+          waitingMembers: "",
         },
         showCreateBox: false,
         showJoinBox: false,
@@ -360,7 +391,7 @@
         try {
           const groupCode = this.currentGroupCode;
           const response = await axios.get(`/api/groups/setting/${groupCode}`);
-
+          console.log("fetch group: " + response);
           if (response.status === 200) {
             const data = response.data;
             this.groupSetting = {
@@ -427,11 +458,21 @@
         this.currentGroupName = this.groups.find(group => group.id === groupId)?.name || '';
         this.currentGroupCode = this.groups.find(group => group.id === groupId)?.groupCode || '';
 
-        // Fetch previous messages
+        // Fetch messages of group by group id
+        // make a wrap to display group detail info
+
+        var page = this.messageDetailPage;
+        var limit = this.messageDetailLimit;
         try {
-          const response = await axios.get(`http://localhost:8082/api/messages/group/${groupId}`);
-          this.messages = response.data;
-          console.log(this.messages);
+          const response = await axios.get(`http://localhost:8082/api/messages/group/${groupId}/${page}/${limit}`);
+          this.messages = response.data.messages;
+
+          this.groupDetailHeader.groupName = response.data.groupName;
+          this.groupDetailHeader.groupId = response.data.groupId;
+          this.groupDetailHeader.joinedMember = response.data.joinedMember;
+          this.groupDetailHeader.waitingMembers = response.data.waitingMember;
+
+          console.log(response);
         } catch (error) {
           console.error("Failed to fetch messages:", error.response?.data || error.message);
         }
@@ -675,6 +716,25 @@
   pointer-events: none;
 }
 
+.shadow-md {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-lg {
+  box-shadow: 0 8px 10px rgba(0, 0, 0, 0.15);
+}
+
+.rounded-full {
+  border-radius: 9999px;
+}
+
+.transition {
+  transition: all 0.2s ease-in-out;
+}
+
+.hover\:shadow-lg:hover {
+  box-shadow: 0 8px 10px rgba(0, 0, 0, 0.2);
+}
 
   </style>
   
