@@ -15,14 +15,18 @@
       />
 
       <!-- Group List -->
-      <div class="flex-grow overflow-y-auto">
+      <div
+       class="flex-grow overflow-y-auto">
         <ul v-if="groups.length > 0" class="space-y-3">
           <li
             v-for="group in groups"
             :key="group.id"
             class="flex items-center justify-between p-3 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition"
-            :class="group.id === currentGroupId ? 'bg-blue-200' : 'bg-white hover:bg-blue-50'"
-            @click="selectGroup(group.id)"
+            :class="[
+              group.id === currentGroupId ? 'bg-blue-200' : 'bg-white hover:bg-blue-50',
+              group.status === 'joined' ? '' : 'cursor-not-allowed opacity-50'
+            ]"
+            @click="group.status === 'joined' ? selectGroup(group.id) : null"
           >
             <!-- Avatar -->
             <div class="flex items-center">
@@ -34,16 +38,18 @@
               <!-- Group Info -->
               <div>
                 <p class="font-semibold text-lg text-left">{{ group.name }}</p>
-                <p class="text-gray-500 text-sm">
+                <p v-if="group.ownerId == user.id" class="text-gray-500 text-sm">
                   <span>{{ group.groupCode }}</span>
                   <button
-                      class="ml-5 bg-gray-300 text-gray-700 px-2 py-1 text-xs rounded hover:bg-gray-400"
-                      @click.stop="copyGroupCode(group.groupCode)"
-                    >
-                      Copy
-                    </button>
-                 </p>
-                
+                    class="ml-5 bg-gray-300 text-gray-700 px-2 py-1 text-xs rounded hover:bg-gray-400"
+                    @click.stop="copyGroupCode(group.groupCode)"
+                  >
+                    Copy
+                  </button>
+                </p>
+                <p v-if="group.status == 'waiting'">
+                  <span>Waiting for approval</span>
+                </p>
               </div>
             </div>
           </li>
@@ -51,15 +57,18 @@
         <p v-else class="text-gray-500 text-center">No groups found. Join or create a new group.</p>
       </div>
 
-      <!-- Create Group Card -->
-      <div class="p-4 rounded-lg shadow-md bg-gradient-to-r from-green-400 to-blue-500 text-white mt-4">
-        <h3 class="text-lg font-bold mb-2">Create a New Group</h3>
+      <!-- Create Box -->
+      <div
+        v-show="showCreateBox"
+        class="mt-4 p-4 rounded-lg shadow-md bg-gradient-to-r from-green-400 to-blue-500 text-white transition-transform transform origin-top general-animate-fade"
+      >
+              <h3 class="text-lg font-bold mb-2">Create a New Group</h3>
         <input
           v-model="newGroupName"
           placeholder="Enter group name"
-          class="border p-2 w-full mb-2 text-black rounded-lg"
+          class="border p-2 w-full mb-2 text-black rounded"
         />
-        <select v-model="selectedDuration" class="border p-2 w-full mb-2 bg-transparent rounded-lg">
+        <select v-model="selectedDuration" class="border p-2 w-full mb-2 bg-transparent rounded">
           <option value="30">30 minutes</option>
           <option value="60">1 hour</option>
           <option value="180">3 hours</option>
@@ -71,27 +80,55 @@
         </div>
         <button
           @click="createGroup"
-          class="bg-white text-blue-500 px-4 py-2 rounded-lg w-full font-semibold hover:bg-gray-100 transition"
+          class="bg-white text-blue-500 px-4 py-2 rounded w-full font-semibold hover:bg-gray-100"
         >
           Create Group
         </button>
       </div>
 
-      <!-- Join Group Card -->
-      <div class="p-4 rounded-lg shadow-md bg-gradient-to-r from-green-400 to-blue-500 text-white mt-4">
+      <!-- Join Box -->
+      <div
+        v-show="showJoinBox"
+        class="mt-4 p-4 rounded-lg shadow-md bg-gradient-to-r from-green-400 to-blue-500 text-white transition-transform transform origin-top general-animate-fade"
+      >
         <h3 class="text-lg font-bold mb-2">Join Group</h3>
         <input
           v-model="joinGroupCode"
           placeholder="Enter group code"
+          class="border p-2 w-full mb-2 text-black rounded"
+        />
+        <input
+          v-model="joinGroupMessage"
+          placeholder="Message"
           class="border p-2 w-full mb-2 text-black rounded-lg"
         />
         <button
           @click="joinGroup"
-          class="bg-white text-blue-500 px-4 py-2 rounded-lg w-full font-semibold hover:bg-gray-100 transition"
+          class="bg-white text-blue-500 px-4 py-2 rounded w-full font-semibold hover:bg-gray-100"
         >
           Join
         </button>
       </div>
+
+      <!-- Display Create or Joined form  -->
+      <div class="flex justify-between space-x-2 mt-4">
+        <button
+          class="flex-1 bg-gradient-to-r from-blue-500 to-blue-700 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-blue-800 transition"
+          @click="toggleBox('create')"
+        >
+          Create Group
+        </button>
+        <button
+          class="flex-1 bg-gradient-to-r from-green-500 to-green-700 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-green-800 transition"
+          @click="toggleBox('join')"
+        >
+          Join Group
+        </button>
+      </div>
+
+
+
+
     </div>
 
     <!-- Right Panel: Messages -->
@@ -125,7 +162,9 @@
 
             <!-- Message Content -->
             <div class="text-sm max-w-md flex flex-col">
-              <p
+             
+              
+              <div
                 class="p-2"
                 :class="[
                   'rounded-lg',
@@ -133,9 +172,19 @@
                     ? 'bg-blue-500 text-white text-right rounded-tl-lg rounded-tr-none' 
                     : 'bg-gray-200 text-left rounded-tl-none rounded-tr-lg'
                 ]"
-              >
-                {{ message.content }}
-              </p>
+              >  
+                <p 
+                  :class="[ 
+                      'font-bold ',
+                      message.userId === user.id
+                      ? 'text-gray-300'
+                      : 'text-green-600'
+                    ]">
+                    {{ message.senderName }}
+                </p>
+                <p>{{ message.content }}</p>
+  
+            </div>
               <span
                 class="text-gray-500 text-xs block mt-1"
                 :class="message.userId === user.id ? 'text-right' : ''"
@@ -175,13 +224,13 @@
 
   </div>
 
-  <!-- Toast Notification -->
   <div
     v-if="showToast"
-    class="fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg animate-fade"
+    class="fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded shadow-lg toast-animate-fade"
   >
     {{ toastMessage }}
   </div>
+
 </template>
 
   
@@ -191,6 +240,8 @@
   export default {
     data() {
       return {
+        showCreateBox: true,
+        showJoinBox: false,
         toastMessage: '',
         showToast: false,
         user: JSON.parse(localStorage.getItem("x-user")) || {}, // Retrieve user info
@@ -200,6 +251,7 @@
         currentGroupName: "",
         currentGroupCode: "",
         joinGroupCode: "",
+        joinGroupMessage: "",
         messages: [], // save message 
         newMessage: "", // new message from input
         newGroupName: "",
@@ -235,6 +287,15 @@
         },
       },
     methods: {
+      toggleBox(type) {
+        if (type === "create") {
+          this.showCreateBox = !this.showCreateBox;
+          this.showJoinBox = false; // Ẩn Join Box
+        } else if (type === "join") {
+          this.showJoinBox = !this.showJoinBox;
+          this.showCreateBox = false; // Ẩn Create Box
+        }
+      },
 
       scrollToBottom() {
         const container = this.$refs.messagesContainer;
@@ -271,6 +332,7 @@
         try {
           const response = await axios.get(`http://localhost:8082/api/messages/group/${groupId}`);
           this.messages = response.data;
+          console.log(this.messages);
         } catch (error) {
           console.error("Failed to fetch messages:", error.response?.data || error.message);
         }
@@ -375,6 +437,7 @@
           alert("Failed to create group. Please try again.");
         }
       },
+
       async joinGroup() {
         if (!this.joinGroupCode) {
           alert("Group code cannot be empty!");
@@ -386,6 +449,7 @@
           const response = await axios.post("http://localhost:8082/api/groups/join", {
             groupCode: this.joinGroupCode,
             userId: this.user.id,
+            message: this.joinGroupMessage,
           });
 
           console.log(response.data);
@@ -410,8 +474,8 @@
   
   <style scoped>
 
-  /* Toast Notification */
-  @keyframes fade {
+  /* Toast Notification Animation */
+@keyframes toastFade {
   0% {
     opacity: 0;
     transform: translateY(20px);
@@ -429,9 +493,30 @@
   }
 }
 
-.animate-fade {
-  animation: fade 1s ease-in-out;
+.toast-animate-fade {
+  animation: toastFade 1s ease-in-out;
 }
+
+/* General Fade Animation */
+@keyframes generalFadeIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.general-animate-fade {
+  animation: generalFadeIn 0.3s ease-out;
+  transform: scale(1); /* Đặt trạng thái mặc định */
+}
+
+
+
+
   /* group side bar */
 
   .hover:bg-gray-200:hover {
@@ -444,28 +529,6 @@
     border-radius: 9999px; /* Hình tròn */
   }
 
-  /* Toast Animation */
-@keyframes fade {
-  0% {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  20% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  80% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-}
-
-.animate-fade {
-  animation: fade 1s ease-in-out;
-}
 
 /* General Styles */
 .hover\:bg-gray-200:hover {
