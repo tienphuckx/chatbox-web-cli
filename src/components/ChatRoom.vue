@@ -111,32 +111,44 @@
           <div
             v-for="message in currentGroupMessages"
             :key="message.id"
-            class="flex mb-4"
-            :class="message.userId === user.id ? 'justify-end' : 'justify-start'"
+            class="mb-6 flex"
+            :class="message.userId === user.id ? 'flex-row-reverse' : ''"
           >
-            <div
-              class="flex items-start space-x-4"
-              :class="message.userId === user.id ? 'flex-row-reverse' : ''"
-            >
+            <!-- Avatar -->
+            <div class="flex flex-col items-center mr-3" :class="message.userId === user.id ? 'ml-3 mr-0' : ''">
               <img
                 :src="`https://ui-avatars.com/api/?name=${message.userId}`"
                 alt="Avatar"
-                class="w-10 h-10 rounded-full"
+                class="w-10 h-10 rounded-full mb-1"
               />
-              <div class="text-sm max-w-md">
-                <p
-                  class="p-2 rounded-lg"
-                  :class="message.userId === user.id ? 'bg-blue-500 text-white text-right' : 'bg-gray-200 text-left'"
-                >
-                  {{ message.content }}
-                </p>
-                <span class="text-gray-500 text-xs block mt-1" :class="message.userId === user.id ? 'text-right' : ''">
-                  {{ new Date(message.createdAt).toLocaleString() }}
-                </span>
-              </div>
+            </div>
+
+            <!-- Message Content -->
+            <div class="text-sm max-w-md flex flex-col">
+              <p
+                class="p-2"
+                :class="[
+                  'rounded-lg',
+                  message.userId === user.id 
+                    ? 'bg-blue-500 text-white text-right rounded-tl-lg rounded-tr-none' 
+                    : 'bg-gray-200 text-left rounded-tl-none rounded-tr-lg'
+                ]"
+              >
+                {{ message.content }}
+              </p>
+              <span
+                class="text-gray-500 text-xs block mt-1"
+                :class="message.userId === user.id ? 'text-right' : ''"
+              >
+                {{ new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+              </span>
+
             </div>
           </div>
         </div>
+
+
+
 
 
         <!-- Input New Message -->
@@ -311,7 +323,7 @@
           console.log(message);
           this.webSocket.send(JSON.stringify(message));
           this.newMessage = '';
-          
+
           this.$nextTick(() => {
           this.scrollToBottom();
       });
