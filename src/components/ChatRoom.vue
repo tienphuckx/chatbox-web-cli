@@ -521,7 +521,13 @@
           this.webSocket.close();
         }
 
-        this.webSocket = new WebSocket(`ws://localhost:8082/ws/chat`);
+        var user = JSON.parse(localStorage.getItem("x-user"));
+        if (user && user.userCode) {
+            var token = user.userCode;
+            this.webSocket = new WebSocket(`ws://localhost:8082/ws/chat?token=${token}`);
+        } else {
+            console.error("User code not found in local storage.");
+        }
 
         this.webSocket.onopen = () => {
           console.log('WebSocket connection established');
@@ -529,11 +535,35 @@
 
         this.webSocket.onmessage = (event) => {
           try {
-            const message = JSON.parse(event.data);
-            console.log('Received WebSocket message:', message);
-            if (message.groupId === this.currentGroupId) {
-              this.messages.push(message);
+            const res = JSON.parse(event.data);
+            console.log('Received WebSocket message:', JSON.stringify(res));
+            console.log('Type:', res.type);
+
+
+            if (res.type === 'WS_MSG') {
+              if (res.data.groupId === this.currentGroupId) {
+                this.messages.push(res.data);
+              }
             }
+            
+            if (res.type === 'WS_APPROVED') {
+
+              // Correctly parse the user ID from local storage
+              const user = JSON.parse(localStorage.getItem("x-user"));
+              const userId = user ? user.id : null;
+
+              if (userId && res.data.memberId === userId) {
+                console.log("User approved, calling this.fetchGroups();");
+   
+                this.fetchGroups();  // Fetch the updated group list from the server
+              } else {
+                console.log("User ID does not match, no action taken.");
+              }
+            }
+
+
+
+
           } catch (error) {
             console.error("Failed to process WebSocket message:", error);
           }
@@ -575,15 +605,19 @@
       async fetchGroups() {
         try {
           const response = await axios.get(`http://localhost:8082/api/groups/user/${this.user.id}`);
-          this.groups = response.data.map(group => ({
+          
+          // Ensure reactivity by replacing the array instead of modifying it directly
+          this.groups = [...response.data.map(group => ({
             ...group,
-          }));
+          }))];  // Shallow copy to trigger reactivity
+
           console.log("Fetched groups:", this.groups);
         } catch (error) {
           console.error("Error fetching groups:", error.response?.data || error.message);
           alert("Failed to fetch groups. Please try again.");
         }
       },
+
 
       async createGroup() {
         if (!this.newGroupName) {
