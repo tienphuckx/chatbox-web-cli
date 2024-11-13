@@ -263,7 +263,7 @@
                   {{ member.id == groupSetting.onwerId && member.id == user.id ? 'You' : member.name }}
                 </span>
                 <span v-if="user.id == groupSetting.onwerId && member.id != groupSetting.onwerId">
-                  <button class="ml-3 text-red-500" @click="removeMember">Remove</button>
+                  <button class="ml-3 text-red-500" @click="removeMember(member.id)">Remove</button>
                 </span>
               </div>
             </li>
@@ -595,8 +595,9 @@
           this.newMessage = '';
 
           this.$nextTick(() => {
-          this.scrollToBottom();
-      });
+              this.scrollToBottom();
+          });
+          
         } else {
           alert('WebSocket connection is not open.');
         }
@@ -676,9 +677,27 @@
           console.error("Error joining group:", error.response?.data || error.message);
           alert("Failed to join group. Please try again.");
         }
-      }
+      },
 
-     
+      async removeMember(memberId) {
+        if(!memberId) {
+          alert("Member ID cannot be null!");
+          return;
+        }
+        const res = await axios.post("http://localhost:8082/api/groups/member/remove", {
+          userCode: JSON.parse(localStorage.getItem("x-user")).userCode,
+          groupCode: this.currentGroupCode,
+          memberId: memberId,
+        });
+
+        console.log(JSON.stringify(res));
+
+        if(res.data.code == 200) {
+          alert(res.data.message); // Show success message
+          this.fetchGroups(); // Refresh groups
+          this.toggleSetting(); //
+        }
+      },
 
     },
   };
