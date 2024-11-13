@@ -139,7 +139,7 @@
       <div v-else class="flex flex-col h-full relative">
 
         <!-- Header -->
-        <div class="flex justify-between items-center bg-blue-100 p-4 rounded-lg shadow-md">
+        <div class="flex mb-2 justify-between items-center bg-blue-100 p-4 rounded-lg shadow-md">
           <!-- Group Info -->
           <div>
             <h2 class="text-2xl font-bold text-blue-800 mb-1">
@@ -258,9 +258,11 @@
           <p class="text-gray-500 mb-4">Joined Members:</p>
           <ul class="list-disc pl-5">
             <li v-for="member in groupSetting.joinedMembers" :key="member.id" class="mb-1">
-              <div v-if="member.id">
-                <span class="text-gray-500">{{ member.name }}</span>
-                <span>
+              <div >
+                <span v-if="1">
+                  {{ member.id == groupSetting.onwerId && member.id == user.id ? 'You' : member.name }}
+                </span>
+                <span v-if="user.id == groupSetting.onwerId && member.id != groupSetting.onwerId">
                   <button class="ml-3 text-red-500" @click="removeMember">Remove</button>
                 </span>
               </div>
@@ -270,7 +272,11 @@
           <p class="text-gray-500 mb-4">Waiting Members:</p>
           <ul class="list-disc pl-5">
             <li v-for="member in groupSetting.waitingMembers" :key="member.id" class="mb-1">
-              {{ member.name }} - {{ member.message }}
+             
+              <span>{{ member.name }} </span>
+              <button class="ml-3 text-red-500" @click="declineMember(member.id)">Decline</button>
+              <button class="ml-3 text-blue-500" @click="approveMember(member.id)">Approve</button>
+              <p class="text-gray-500" >{{ member.message }}</p>
             </li>
           </ul>
 
@@ -319,6 +325,7 @@
         messageDetailLimit: 10,
         showSetting: false,
         groupSetting: {
+          onwerId: "",
           name: "",
           owner: "",
           joinedMembers: [],
@@ -378,23 +385,54 @@
         },
       },
     methods: {
+
+      declineMember(memberId) {
+        console.log("declineMember: " + memberId);
+      },
+
+      async approveMember(memberId) {
+        console.log("approveMember: " + memberId);
+        try {
+          const response = await axios.post("http://localhost:8082/api/groups/approve", {
+            groupId: this.currentGroupId,
+            groupOwnerId: this.user.id,
+            memberId: memberId,
+          });
+
+          if (response.data.status == 200) {
+            alert(response.data.message);
+            this.fetchGroups();
+            this.selectGroup(this.currentGroupId);
+            this.toggleSetting();
+          } else {
+            alert(response.data.message);
+          }
+        } catch (error) {
+          console.error("Error joining group:", error.response?.data || error.message);
+          alert("Failed to join group. Please try again.");
+        }
+      },
+
       toggleSetting() {
         this.showSetting = !this.showSetting;
-        if (this.showSetting) { // call when open setting tab (showSetting == true)
+        if (this.showSetting) {
           this.fetchSetting();
         }
       },
+
       closeSetting() {
         this.showSetting = false;
       },
+
       async fetchSetting() {
         try {
           const groupCode = this.currentGroupCode;
           const response = await axios.get(`/api/groups/setting/${groupCode}`);
-          console.log("fetch group: " + response);
+          console.log(response.data);
           if (response.status === 200) {
             const data = response.data;
             this.groupSetting = {
+              onwerId: data.ownerId,
               name: data.groupName,
               owner: data.ownerName,
               joinedMembers: data.listJoinedMember.map(member => ({
@@ -548,7 +586,7 @@
       },
 
       async createGroup() {
-        if (!this.newGroupName || !this.maximumMembers) {
+        if (!this.newGroupName) {
           alert("Group name and maximum members cannot be empty!");
           return;
         }
@@ -612,129 +650,129 @@
   };
   </script>
   
-  <style scoped>
+<style scoped>
 
-  /* Toast Notification Animation */
-@keyframes toastFade {
-  0% {
-    opacity: 0;
-    transform: translateY(20px);
+    /* Toast Notification Animation */
+  @keyframes toastFade {
+    0% {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    20% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    80% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(20px);
+    }
   }
-  20% {
-    opacity: 1;
-    transform: translateY(0);
+
+  .toast-animate-fade {
+    animation: toastFade 1s ease-in-out;
   }
-  80% {
-    opacity: 1;
+
+  /* General Fade Animation */
+  @keyframes generalFadeIn {
+    0% {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
-  100% {
-    opacity: 0;
-    transform: translateY(20px);
+
+  .general-animate-fade {
+    animation: generalFadeIn 0.3s ease-out;
+    transform: scale(1); /* Đặt trạng thái mặc định */
   }
-}
 
-.toast-animate-fade {
-  animation: toastFade 1s ease-in-out;
-}
 
-/* General Fade Animation */
-@keyframes generalFadeIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.9);
+
+
+    /* group side bar */
+
+    .hover:bg-gray-200:hover {
+      background-color: #e5e7eb; /* Màu xám nhạt */
+    }
+    .bg-blue-100 {
+      background-color: #ebf8ff; /* Màu xanh nhạt */
+    }
+    .rounded-full {
+      border-radius: 9999px; /* Hình tròn */
+    }
+
+
+  /* General Styles */
+  .hover\:bg-gray-200:hover {
+    background-color: #e5e7eb;
   }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
 
-.general-animate-fade {
-  animation: generalFadeIn 0.3s ease-out;
-  transform: scale(1); /* Đặt trạng thái mặc định */
-}
-
-
-
-
-  /* group side bar */
-
-  .hover:bg-gray-200:hover {
-    background-color: #e5e7eb; /* Màu xám nhạt */
-  }
   .bg-blue-100 {
-    background-color: #ebf8ff; /* Màu xanh nhạt */
+    background-color: #ebf8ff;
   }
+
   .rounded-full {
-    border-radius: 9999px; /* Hình tròn */
+    border-radius: 9999px;
+  }
+
+  .transition {
+    transition: all 0.3s ease-in-out;
+  }
+  /* List Messages */
+  .messages {
+    max-height: calc(100% - 56px); /* Tính toán trừ khoảng trống cho header và footer nếu cần */
   }
 
 
-/* General Styles */
-.hover\:bg-gray-200:hover {
-  background-color: #e5e7eb;
-}
 
-.bg-blue-100 {
-  background-color: #ebf8ff;
-}
+  /* Overlay Background */
+  .bg-opacity-50 {
+    background-color: rgba(0, 0, 0, 0.5);
+  }
 
-.rounded-full {
-  border-radius: 9999px;
-}
+  /* Transition Effect for Setting Bar */
+  .transform {
+    transition: transform 0.3s ease-in-out;
+  }
 
-.transition {
-  transition: all 0.3s ease-in-out;
-}
-/* List Messages */
-.messages {
-  max-height: calc(100% - 56px); /* Tính toán trừ khoảng trống cho header và footer nếu cần */
-}
+  .translate-x-full {
+    transform: translateX(100%);
+  }
 
+  .translate-x-0 {
+    transform: translateX(0);
+  }
 
+  /* Disable pointer events when blurred */
+  .pointer-events-none {
+    pointer-events: none;
+  }
 
-/* Overlay Background */
-.bg-opacity-50 {
-  background-color: rgba(0, 0, 0, 0.5);
-}
+  .shadow-md {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
 
-/* Transition Effect for Setting Bar */
-.transform {
-  transition: transform 0.3s ease-in-out;
-}
+  .shadow-lg {
+    box-shadow: 0 8px 10px rgba(0, 0, 0, 0.15);
+  }
 
-.translate-x-full {
-  transform: translateX(100%);
-}
+  .rounded-full {
+    border-radius: 9999px;
+  }
 
-.translate-x-0 {
-  transform: translateX(0);
-}
+  .transition {
+    transition: all 0.2s ease-in-out;
+  }
 
-/* Disable pointer events when blurred */
-.pointer-events-none {
-  pointer-events: none;
-}
+  .hover\:shadow-lg:hover {
+    box-shadow: 0 8px 10px rgba(0, 0, 0, 0.2);
+  }
 
-.shadow-md {
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.shadow-lg {
-  box-shadow: 0 8px 10px rgba(0, 0, 0, 0.15);
-}
-
-.rounded-full {
-  border-radius: 9999px;
-}
-
-.transition {
-  transition: all 0.2s ease-in-out;
-}
-
-.hover\:shadow-lg:hover {
-  box-shadow: 0 8px 10px rgba(0, 0, 0, 0.2);
-}
-
-  </style>
+</style>
   
