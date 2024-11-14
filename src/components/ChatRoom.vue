@@ -283,16 +283,15 @@
           <div v-if="groupSetting.isOwner" class="mt-4">
             <button
               class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition w-full"
-            >
-              Delete Group
-            </button>
+              @click="deleteGroup(this.currentGroupId)"
+            >Delete group</button>
           </div>
+
           <div v-else class="mt-4">
             <button
               class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition w-full"
-            >
-              Leave Group
-            </button>
+              @click="leaveGroup()"
+            >Leave group</button>
           </div>
         </div>
 
@@ -571,6 +570,14 @@
               }
             }
 
+            if(res.type === 'WS_LEAVE_GR') {
+              console.log("User left group, calling this.fetchGroups();");
+              if(res.data.memberId == user.id) {
+                this.fetchGroups();
+                this.currentGroupId = null;
+              }
+            }
+
 
           } catch (error) {
             console.error("Failed to process WebSocket message:", error);
@@ -722,6 +729,18 @@
           this.toggleSetting(); //
         }
       },
+
+      async leaveGroup() {
+        const response = await axios.post("http://localhost:8082/api/groups/member/leave", {
+          userCode: JSON.parse(localStorage.getItem("x-user")).userCode,
+          groupCode: this.currentGroupCode,
+        });
+        if (response.data.code == 200) {
+          alert(response.data.message); 
+          this.fetchGroups(); // Refresh groups
+          this.toggleSetting();
+        }
+      }
 
     },
   };
