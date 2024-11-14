@@ -563,6 +563,13 @@
               }
             }
 
+            if(res.type === 'WS_RM_MEMBER') {
+              console.log("User removed, calling this.fetchGroups();");
+              if(res.data.removeMemberId == user.id) {
+                this.fetchGroups();
+                this.currentGroupId = null;
+              }
+            }
 
 
           } catch (error) {
@@ -666,10 +673,7 @@
             message: this.joinGroupMessage,
           });
 
-          console.log(response.data);
-
           if (response.data.success) {
-            alert(response.data.message); // Show success message
             this.fetchGroups(); // Refresh groups
           } else {
             alert(response.data.message); // Show error message
