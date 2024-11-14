@@ -386,10 +386,6 @@
       },
     methods: {
 
-      declineMember(memberId) {
-        console.log("declineMember: " + memberId);
-      },
-
       async approveMember(memberId) {
         console.log("approveMember: " + memberId);
         try {
@@ -400,7 +396,6 @@
           });
 
           if (response.data.status == 200) {
-            alert(response.data.message);
             this.fetchGroups();
             this.selectGroup(this.currentGroupId);
             this.toggleSetting();
@@ -685,6 +680,26 @@
           return;
         }
         const res = await axios.post("http://localhost:8082/api/groups/member/remove", {
+          userCode: JSON.parse(localStorage.getItem("x-user")).userCode,
+          groupCode: this.currentGroupCode,
+          memberId: memberId,
+        });
+
+        console.log(JSON.stringify(res));
+
+        if(res.data.code == 200) {
+          alert(res.data.message); // Show success message
+          this.fetchGroups(); // Refresh groups
+          this.toggleSetting(); //
+        }
+      },
+
+      async declineMember(memberId) {
+        if(!memberId) {
+          alert("Member ID cannot be null!");
+          return;
+        }
+        const res = await axios.post("http://localhost:8082/api/groups/member/decline", {
           userCode: JSON.parse(localStorage.getItem("x-user")).userCode,
           groupCode: this.currentGroupCode,
           memberId: memberId,
