@@ -283,7 +283,7 @@
           <div v-if="groupSetting.isOwner" class="mt-4">
             <button
               class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition w-full"
-              @click="deleteGroup(this.currentGroupId)"
+              @click="deleteGroup()"
             >Delete group</button>
           </div>
 
@@ -578,6 +578,14 @@
               }
             }
 
+            if(res.type === 'WS_DEL_GR') {
+              console.log("Group deleted, calling this.fetchGroups();");
+              if(res.data.userId == user.id) {
+                this.fetchGroups();
+                this.currentGroupId = null;
+              }
+            }
+
 
           } catch (error) {
             console.error("Failed to process WebSocket message:", error);
@@ -736,9 +744,21 @@
           groupCode: this.currentGroupCode,
         });
         if (response.data.code == 200) {
-          alert(response.data.message); 
           this.fetchGroups(); // Refresh groups
           this.toggleSetting();
+          this.currentGroupId = null;
+        }
+      },
+
+      async deleteGroup() {
+        const response = await axios.post("http://localhost:8082/api/groups/delete/group", {
+          userCode: JSON.parse(localStorage.getItem("x-user")).userCode,
+          groupCode: this.currentGroupCode,
+        });
+        if (response.data.code == 200) {
+          this.fetchGroups();
+          this.toggleSetting();
+          this.currentGroupId = null;
         }
       }
 
