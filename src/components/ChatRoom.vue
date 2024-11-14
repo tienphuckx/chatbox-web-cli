@@ -556,6 +556,12 @@
               }
             }
 
+            if (res.type === 'WS_DECLINE') {
+              console.log("User declined, calling this.fetchGroups();");
+              if(res.data.memberId == user.id) {
+                this.fetchGroups();
+              }
+            }
 
 
 
@@ -688,9 +694,8 @@
         console.log(JSON.stringify(res));
 
         if(res.data.code == 200) {
-          alert(res.data.message); // Show success message
-          this.fetchGroups(); // Refresh groups
-          this.toggleSetting(); //
+          this.fetchGroups();
+          this.toggleSetting();
         }
       },
 
@@ -841,6 +846,7 @@
   .hover\:shadow-lg:hover {
     box-shadow: 0 8px 10px rgba(0, 0, 0, 0.2);
   }
+
 
 </style>
   
