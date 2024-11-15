@@ -195,7 +195,7 @@
                 :class="[
                   'rounded-lg',
                   message.userId === user.id 
-                    ? 'bg-blue-500 text-white text-right rounded-tl-lg rounded-tr-none' 
+                    ? 'bg-blue-400 text-white text-right rounded-tl-lg rounded-tr-none' 
                     : 'bg-gray-200 text-left rounded-tl-none rounded-tr-lg'
                 ]"
               >  
@@ -209,15 +209,20 @@
                     {{ message.senderName }}
                 </p>
                 <p>{{ message.content }}</p>
+               
   
             </div>
+
               <span
                 class="text-gray-500 text-xs block mt-1"
                 :class="message.userId === user.id ? 'text-right' : ''"
               >
                 {{ new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+                <i v-if="message.seen" class="ml-3 fas fa-check-double text-green-500 text-sm"></i> <!-- Seen icon -->
+                <i v-else class="fas fa-check text-gray-500 text-sm"></i> 
               </span>
 
+      
             </div>
           </div>
         </div>
@@ -490,21 +495,18 @@
         this.currentGroupName = this.groups.find(group => group.id === groupId)?.name || '';
         this.currentGroupCode = this.groups.find(group => group.id === groupId)?.groupCode || '';
 
-        // Fetch messages of group by group id
-        // make a wrap to display group detail info
-
         var page = this.messageDetailPage;
         var limit = this.messageDetailLimit;
         try {
           const response = await axios.get(`http://localhost:8082/api/messages/group/${groupId}/${page}/${limit}`);
           this.messages = response.data.messages;
+        
+          await this.checkAndUpdateSeen(this.messages);
 
           this.groupDetailHeader.groupName = response.data.groupName;
           this.groupDetailHeader.groupId = response.data.groupId;
           this.groupDetailHeader.joinedMember = response.data.joinedMember;
           this.groupDetailHeader.waitingMembers = response.data.waitingMember;
-
-          console.log(response);
         } catch (error) {
           console.error("Failed to fetch messages:", error.response?.data || error.message);
         }
@@ -537,6 +539,7 @@
             if (res.type === 'WS_MSG') {
               if (res.data.groupId === this.currentGroupId) {
                 this.messages.push(res.data);
+                // this.checkAndUpdateSeen([res.data]);
               }
             }
             
@@ -586,6 +589,18 @@
               }
             }
 
+            if (res.type === 'WS_SEEN') {
+              console.log("Message seen, checking userId and updating status...");
+              
+              if (res.data.userId === user.id) {
+                const message = this.messages.find(m => m.id === res.data.messageId);
+                if (message) {
+                  message.seen = true;
+                  console.log(`Message with ID ${res.data.messageId} marked as seen.`);
+                }
+              }
+            }
+
 
           } catch (error) {
             console.error("Failed to process WebSocket message:", error);
@@ -599,6 +614,24 @@
         this.webSocket.onerror = (error) => {
           console.error('WebSocket error:', error);
         };
+      },
+
+      async checkAndUpdateSeen(messages) {
+        const unseenMessages = messages.filter(m => !m.seen); // Filter unseen messages
+        const userMessageMap = unseenMessages.map(m => ({
+          userId: m.userId,
+          messageId: m.id
+        }));
+
+        if (userMessageMap.length > 0) {
+          try {
+            const response = await axios.put(`https://localhost:8082/api/messages/seen`, userMessageMap);
+            console.log('Seen status updated successfully for messages:', userMessageMap);
+            console.log(JSON.stringify(response.data));
+          } catch (error) {
+            console.error('Error updating seen status:', error);
+          }
+        }
       },
 
       sendMessage() {
@@ -634,8 +667,6 @@
           this.groups = [...response.data.map(group => ({
             ...group,
           }))];  // Shallow copy to trigger reactivity
-
-          console.log("Fetched groups:", this.groups);
         } catch (error) {
           console.error("Error fetching groups:", error.response?.data || error.message);
           alert("Failed to fetch groups. Please try again.");
